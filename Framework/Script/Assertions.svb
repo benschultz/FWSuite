@@ -1,0 +1,1720 @@
+﻿'*******************************************************************************
+'*                             FILE HEADER 
+'*******************************************************************************
+'*
+'*  File Name:    Assertions.vbs
+'*
+'*  Path:         Automation\library\script_libraries
+'*
+'*  Reference:    <Project Number>
+'*
+'*
+'*  (C) Copyright Ventyx, an ABB Company, 2014
+'*
+'*******************************************************************************
+'*                          FILE DESCRIPTION
+'*******************************************************************************
+'* Contains custom checking functions. Each "wraps" logic to check some property
+'* such as a value or existence and send the result to the Reporter Class. The set of
+'* checks consists of 3 sections as follows:
+'* 		Check* - these are private functions and are not intended to be called
+'*				directly. They actually contain the logic to do the checking and
+'*				reporting. They are designed to be called by public wrapper
+'*				functions described below. Their behavior changes slightly
+'*				based on how they're called.
+'*		Assert* - these are wrapper functions that call corresponding Check*
+'*				functions. Assert* functions will report a micFail (numeric
+'*				value of 1) status if the check does not succeed.
+'*		Verify* - these are the same as Assert* except they cause a micWarning
+'*				(numeric value of 3) to be reported if the check does not 
+'*				succeed.
+'*		Assert*OrDie - these are the same as the other Assert* functions, except
+'*				that upon failure, the ExitTest statement is called, ending the
+'*				current test.
+'*			Example:
+'*				Private Function CheckEquality - core logic for check
+'*				Public Function AssertEquality - reports micFail
+'*				Public Function VerifyEquality - reports micWarning
+'*				Public Function AssertEqualityOrDie - reports micFail and exits
+'*
+'*	Note that in all cases, passing behavior is not affected; the routines
+'*	return micPass (numeric value 0) regardless of how they are called.
+'*
+'* Function List:
+'*     InitReporter
+'*     ExitTest
+'*----------------------------
+'*     CheckEquality
+'*     CheckBooleanEquality
+'*     CheckNumericEquality
+'*     CheckNotEqual
+'*     CheckContains
+'*     CheckLessThanOrEqual
+'*     CheckGreaterThanOrEqual
+'*     CheckExists
+'*     CheckNotExists
+'*     CheckFalse
+'*     CheckTrue
+'*----------------------------
+'*     AssertEquality
+'*     AssertBooleanEquality
+'*     AssertNumericEquality
+'*     AssertNotEqual
+'*     AssertContains
+'*     AssertLessThanOrEqual
+'*     AssertGreaterThanOrEqual
+'*     AssertExists
+'*     AssertNotExists
+'*     AssertFalse
+'*     AssertTrue
+'*	   AssertDone
+'*----------------------------
+'*     VerifyEquality
+'*     VerifyBooleanEquality
+'*     VerifyNumericEquality
+'*     VerifyNotEqual
+'*     VerifyContains
+'*     VerifyLessThanOrEqual
+'*     VerifyGreaterThanOrEqual
+'*     VerifyExists
+'*     VerifyNotExists
+'*     VerifyFalse
+'*     VerifyTrue
+'*----------------------------
+'*     AssertEqualityOrDie
+'*     AssertBooleanEqualityOrDie
+'*     AssertNumericEqualityOrDie
+'*     AssertNotEqualOrDie
+'*     AssertContainsOrDie
+'*     AssertLessThanOrEqualOrDie
+'*     AssertGreaterThanOrEqualOrDie
+'*     AssertExistsOrDie
+'*     AssertNotExistsOrDie
+'*     AssertFalseOrDie;
+'*     AssertTrueOrDie
+'*******************************************************************************
+
+'*******************************************************************************
+'*                   DATA DECLARATIONS
+'*******************************************************************************
+Option Explicit
+
+Const micFail = 1 ' Used to Port this code from QTP to TestComplete
+Const micWarning = 3 ' Used to Port this code from QTP to TestComplete
+
+Public Reporter ' Used to Port this code from QTP to TestComplete
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  InitReporter
+'*
+'*       Inputs:  None
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Instantiates the Reporter Class to be used in place of the built in Reporter
+'* object in QTP.  This Subroutine is called from the General Event: 
+'* GeneralEvents_OnStartTest  
+'*******************************************************************************
+Public Sub InitReporter()
+
+set Reporter = new Report_class
+
+End Sub
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckEquality
+'*
+'*       Inputs:  strExpected - expected value. Note this can take a regex.
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are identical. Strings are stripped of spaces before
+'* being compared. Passes if they are identical, fail/warn otherwise. Exits test
+'* upon Failure when called from Assert*OrDie.
+'*
+'* The strExpected parameter can take a limited regular expression. "Limited" in
+'* the sense that it is designed to work as closely to the original binary (default)
+'* compare given by the str1 = str2 or str1 <> str2 usage with vbs. So, any
+'* regex supplied will have to cover the entire string and will be case sensitive
+'* implicitly. e.g.
+'* 	test string = abcdefg
+'* 	patterns:
+'* 	"abcdefg" - will match
+'* 	"\w+?cde\w+" - will match
+'* 	"cde" - will NOT match
+'* 	"abcdefG" - will NOT match
+'*
+'* Because spaces are stripped out before comparison, the following will also
+'* 	match:
+'* 	test string = abc d e f   g
+'* 	pattern:
+'* 	"\w+?cde\w+?" - will match
+'*
+'* This only implements the ".Test()" method of the vbs regular expression object
+'* so if the actual matched values are desired, use the regex-related utility
+'* functions instead.
+'*******************************************************************************
+Public Sub TestCheckEquality()
+
+CheckEquality "Yes", "Yes", "Some Check for Yes/No", "Some Check for Yes/No", micWarning, false
+
+End Sub
+Private Function CheckEquality(strExpected, strActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+	Dim objRegex ' regular expression object
+	Dim strPattern ' holds modified "strExpected" value
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+		
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	strExpected = Replace(strExpected, " ", "")
+
+	strActual = Replace(strActual, " ", "")
+
+	
+	' setup regex to behave like "=" or "<>" in string compare:
+	' case-sensitive, and matching on entirety
+	' of string
+	Set objRegex = New RegExp
+	strPattern = "^" & Trim(strExpected) & "$"
+	objRegex.IgnoreCase = False
+	objRegex.Pattern = strPattern
+	
+	If Not objRegex.Test(Trim(strActual)) Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected &" ACTUAL: " & strActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+	Set objRegex = Nothing
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckBooleanEquality
+'*
+'*       Inputs:  boolExpected - expected value
+'*                boolActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two booleans are identical. Passes if they are identical, fail/warn
+'* otherwise. Exits test upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckBooleanEquality(boolExpected, boolActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If boolExpected <> boolActual Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & boolExpected &" ACTUAL: " & boolActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckNumericEquality
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two numerical values are identical. Passes if they are identical, 
+'* fail/warn otherwise. Exits test upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckNumericEquality(numExpected, numActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If Cdbl(numExpected) <> Cdbl(numActual) Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & boolExpected &" ACTUAL: " & boolActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckNotEqual
+'*
+'*       Inputs:  strExpected - expected value. Note this can take a regex.
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are NOT identical. Strings are stripped of spaces 
+'* before being compared. Passes if they are NOT identical, fail/warn otherwise.
+'* Exits test upon Failure when called from Assert*OrDie.
+'*
+'* The strExpected parameter can take a limited regular expression. "Limited" in
+'* the sense that it is designed to work as closely to the original binary (default)
+'* compare given by the str1 = str2 or str1 <> str2 usage with vbs. So, any
+'* regex supplied will have to cover the entire string and will be case sensitive
+'* implicitly. e.g.
+'* 	test string = abcdefg
+'* 	patterns:
+'* 	"abcdefg" - will match
+'* 	"\w+?cde\w+" - will match
+'* 	"cde" - will NOT match
+'* 	"abcdefG" - will NOT match
+'*
+'* Because spaces are stripped out before comparison, the following will also
+'* 	match:
+'* 	test string = abc d e f   g
+'* 	pattern:
+'* 	"\w+?cde\w+?" - will match
+'*
+'* This only implements the ".Test()" method of the vbs regular expression object
+'* so if the actual matched values are desired, use the regex-related utility
+'* functions instead.
+'*******************************************************************************
+Private Function CheckNotEqual(strExpected, strActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+	Dim objRegex ' regular expression object
+	Dim strPattern ' holds modified "strExpected" value
+	
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	'strExpected = Replace(strExpected, " ", "")
+	'strActual = Replace(strActual, " ", "")
+	strExpected = StripAllSpc(strExpected)
+	strActual = StripAllSpc(strActual)
+	' setup regex to behave like "=" or "<>" in string compare:
+	' case-sensitive, and matching on entirety
+	' of string
+	Set objRegex = New RegExp
+	strPattern = "^" & Trim(strExpected) & "$"
+	objRegex.IgnoreCase = False
+	objRegex.Pattern = strPattern
+	
+	If objRegex.Test(Trim(strActual)) Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected &"is not equal to ACTUAL: " & strActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+	Set objRegex = Nothing
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckContains
+'*
+'*       Inputs:  strExpected - expected value
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if strActual is contained within strExpected. Strings are stripped of
+'* spaces before being examined. Passes if strExpected is found within (or is
+'* equal to) strActual, fail/warn otherwise. Exits test upon Failure when called
+'* from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckContains(strExpected, strActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		'
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	strExpected = Replace(strExpected, " ", "")
+	strActual = Replace(strActual, " ", "")
+
+	If InStr(1, strExpected, Trim(strActual), 1) = 0 Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected &" DOES NOT CONTAIN ACTUAL: " & strActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckLessThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is less than or equal to numActual. Passes if
+'* numExpected < = numActual, fail/warn if numExpected > numActual. Exits test 
+'* upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckLessThanOrEqual(numExpected, numActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If Cdbl(numExpected) > Cdbl(numActual) Then
+		Reporter.ReportEvent numFaultlevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected & " is less than or equal to " & strActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckGreaterThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is greater than or equal to numActual. Passes if
+'* numExpected > = numActual, fail/warn if numExpected < numActual. Exits test 
+'* upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckGreaterThanOrEqual(numExpected, numActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If Cdbl(numExpected) < Cdbl(numActual) Then
+		Reporter.ReportEvent numFaultlevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected & " is greater than or equal to " & strActual
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does,
+'* fail/warn if it does not. Exits test upon Failure when called from 
+'* Assert*OrDie.
+'*******************************************************************************
+Private Function CheckExists( ByRef objItem, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If Not objItem.Exist Then
+		Reporter.ReportEvent numFaultlevel, strName, strDescription &" TEST " & strFaultDesc & " -- Object does not exist"
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckNotExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does
+'* NOT exist, fail/warn if it does. Exits test upon Failure when called from 
+'* Assert*OrDie.
+'*******************************************************************************
+Private Function CheckNotExists( ByRef objItem, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+		Dim strFaultDesc ' used in building the output text
+		
+		strFaultDesc = ""
+
+		numFaultLevel = Cint(numFaultLevel)
+		If numFaultLevel = micFail Then
+			strFaultDesc = "FAILED"
+		ElseIf numFaultLevel = micWarning Then
+			strFaultDesc = "WARNING"
+		Else
+			Reporter.ReportEvent micWarning, strName, strDescription &" WARNING - INVALID FAULT LEVEL USED: EXPECTED micFail(1) or micWarning(3) ACTUAL: " & numFaultLevel & ". LEVEL WAS FORCED TO micWarning(3)"
+			strFaultDesc = "WARNING"
+			numFaultlevel = micWarning
+		End If
+
+	If objItem.Exist Then
+		Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- Object exists"
+		If blnExitOnFail Then ExitTest
+	Else
+		Reporter.ReportEvent 0, strName, strDescription &" TEST PASSED"
+	End If
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckFalse
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is False
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckBooleanEquality with the expected value pre-set to "false". Exits 
+'* test upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckFalse(boolActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+	CheckBooleanEquality false, boolActual, strName, strDescription, numFaultLevel, blnExitOnFail
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  CheckTrue
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is True
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*                numFaultLevel - controls whether this reports a failure or
+'*								a warning. Must be either micFail (1) or
+'*								micWarning (3). If any other value is passed in
+'*								the value is forced to micWarning, the check
+'*								runs as a warning, and a separate warning is
+'*								issued citing the erroneous parameter value
+'*								passed in.
+'*                blnExitOnFail - when true, the test exits upon failure, when
+'*								false, it does not
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckBooleanEquality with the expected value pre-set to "true". Exits 
+'* test upon Failure when called from Assert*OrDie.
+'*******************************************************************************
+Private Function CheckTrue(boolActual, strName, strDescription, numFaultLevel, blnExitOnFail)
+
+	CheckBooleanEquality true, boolActual, strName, strDescription, numFaultLevel, blnExitOnFail
+
+End Function
+
+'
+' ########## end of "base" functions for doing checks ##########
+'
+
+'
+' #### Assert versions. These generate micFail status upon failing ####
+'
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertEquality
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex.
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are identical. Strings are stripped of spaces before
+'* being compared. Passes if they are identical, fails otherwise.
+'*
+'* Note that strExpected can be a regex pattern. See CheckEquality function for
+'* details
+'*******************************************************************************
+Public Function AssertEquality(strExpected, strActual, strName, strDescription)
+
+	CheckEquality strExpected, strActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertBooleanEquality
+'*
+'*       Inputs:  boolExpected - expected value
+'*                boolActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two booleans are identical. Passes if they are identical, fails
+'* otherwise.
+'*******************************************************************************
+Public Function AssertBooleanEquality(boolExpected, boolActual, strName, strDescription)
+
+	CheckBooleanEquality boolExpected, boolActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNumericEquality
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two numerical values are identical. Passes if they are identical, 
+'* fails otherwise.
+'*******************************************************************************
+Public Function AssertNumericEquality(numExpected, numActual, strName, strDescription)
+
+	CheckNumericEquality numExpected, numActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNotEqual
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are NOT identical. Strings are stripped of spaces 
+'* before being compared. Passes if they are NOT identical, fails otherwise.
+'*
+'* Note strExpected can take a regex pattern. See CheckNotEqual function for
+'* details
+'*******************************************************************************
+Public Function AssertNotEqual(strExpected, strActual, strName, strDescription)
+
+	CheckNotEqual strExpected, strActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertContains
+'*
+'*       Inputs:  strExpected - expected value
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if strActual is contained within strExpected. Strings are stripped of
+'* spaces before being examined. Passes if strExpected is found within (or is
+'* equal to) strActual, fails otherwise.
+'*******************************************************************************
+Public Function AssertContains(strExpected, strActual, strName, strDescription)
+
+	CheckContains strExpected, strActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertLessThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is less than or equal to numActual. Passes if
+'* numExpected < = numActual, fails if numExpected > numActual
+'*******************************************************************************
+Public Function AssertLessThanOrEqual(strExpected, strActual, strName, strDescription)
+
+	CheckLessThanOrEqual strExpected, strActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertGreaterThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is greater than or equal to numActual. Passes if
+'* numExpected > = numActual, fails if numExpected < numActual
+'*******************************************************************************
+Public Function AssertGreaterThanOrEqual(strExpected, strActual, strName, strDescription)
+
+	CheckGreaterThanOrEqual strExpected, strActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does,
+'* fails if it does not.
+'*******************************************************************************
+Public Function AssertExists( ByRef objItem, strName, strDescription)
+
+	CheckExists objItem, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNotExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does
+'* NOT exist, fails if it does.
+'*******************************************************************************
+Public Function AssertNotExists( ByRef objItem, strName, strDescription)
+
+	CheckNotExists objItem, strName, strDescription, micFail, False
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertFalse
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is False
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckFalse which has the expected value pre-set to "false". Fails if
+'* not false
+'*******************************************************************************
+Public Function AssertFalse(boolActual, strName, strDescription)
+
+	CheckFalse boolActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertTrue
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is True
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckTrue which has the expected value pre-set to "true". Fails if
+'* not true
+'*******************************************************************************
+Public Function AssertTrue(boolActual, strName, strDescription)
+
+	CheckTrue boolActual, strName, strDescription, micFail, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertDone
+'*
+'*       Inputs:  strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Used to indicate a step has completed in a test.  Writes micDone to log along
+'* with a short description.  It is preceeded and followed by CRLF to create
+'* separation in the results for improved readability.
+'*******************************************************************************
+
+Public Function AssertDone(strName, strDescription)
+	Reporter.ReportEvent micDone, vbCRLF & strName & vbCRLF, strDescription
+End Function
+'
+' #### End Assert versions. ###############################################
+'
+
+'
+' #### Verify versions. These generate micWarning status upon failing ####
+'
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyEquality
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are identical. Strings are stripped of spaces before
+'* being compared. Passes if they are identical, warns otherwise.
+'*
+'* Note strExpected can take a regex pattern. See CheckEquality function for
+'* details.
+'*******************************************************************************
+Public Function VerifyEquality(strExpected, strActual, strName, strDescription)
+
+	CheckEquality strExpected, strActual, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyBooleanEquality
+'*
+'*       Inputs:  boolExpected - expected value
+'*                boolActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two booleans are identical. Passes if they are identical, warns
+'* otherwise.
+'*******************************************************************************
+Public Function VerifyBooleanEquality(boolExpected, boolActual, strName, strDescription)
+
+	CheckBooleanEquality boolExpected, boolActual, strName, strDescription, micWarning, False
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyNumericEquality
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two numerical values are identical. Passes if they are identical, 
+'* warns otherwise.
+'*******************************************************************************
+Public Function VerifyNumericEquality(numExpected, numActual, strName, strDescription)
+
+	CheckNumericEquality numExpected, numActual, strName, strDescription, micWarning, False
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyNotEqual
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex.
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are NOT identical. Strings are stripped of spaces 
+'* before being compared. Passes if they are NOT identical, warns otherwise.
+'*
+'* Note strExpected can take a regex pattern. See CheckNotEqual function for
+'* details.
+'*******************************************************************************
+Public Function VerifyNotEqual(strExpected, strActual, strName, strDescription)
+
+	CheckNotEqual strExpected, strActual, strName, strDescription, micWarning, False
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyContains
+'*
+'*       Inputs:  strExpected - expected value
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if strActual is contained within strExpected. Strings are stripped of
+'* spaces before being examined. Passes if strExpected is found within (or is
+'* equal to) strActual, warns otherwise.
+'*******************************************************************************
+Public Function VerifyContains(strExpected, strActual, strName, strDescription)
+
+	CheckContains strExpected, strActual, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyLessThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is less than or equal to numActual. Passes if
+'* numExpected < = numActual, warns if numExpected > numActual
+'*******************************************************************************
+Public Function VerifyLessThanOrEqual(strExpected, strActual, strName, strDescription)
+
+	CheckLessThanOrEqual strExpected, strActual, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyGreaterThanOrEqual
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is greater than or equal to numActual. Passes if
+'* numExpected > = numActual, warns if numExpected < numActual
+'*******************************************************************************
+Public Function VerifyGreaterThanOrEqual(strExpected, strActual, strName, strDescription)
+
+	CheckGreaterThanOrEqual strExpected, strActual, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does,
+'* warns if it does not.
+'*******************************************************************************
+Public Function VerifyExists( ByRef objItem, strName, strDescription)
+
+	CheckExists objItem, strName, strDescription, micWarning, False
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyNotExists
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does
+'* NOT exist, warns if it does.
+'*******************************************************************************
+Public Function VerifyNotExists( ByRef objItem, strName, strDescription)
+
+	CheckNotExists objItem, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyFalse
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is False
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckFalse which has the expected value pre-set to "false". Warns if
+'* not false
+'*******************************************************************************
+Public Function VerifyFalse(boolActual, strName, strDescription)
+
+	CheckFalse boolActual, strName, strDescription, micWarning, False
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  VerifyTrue
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is True
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckTrue which has the expected value pre-set to "true". Warns if
+'* not true
+'*******************************************************************************
+Public Function VerifyTrue(boolActual, strName, strDescription)
+
+	CheckTrue boolActual, strName, strDescription, micWarning, False
+
+End Function
+
+'
+' #### End Verify versions. ##################################################
+'
+
+'
+' #### Assert*OrDie versions. These generate micFail status upon failing ####
+' #### and exit the test.                                               ####
+'
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertEqualityOrDie
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are identical. Strings are stripped of spaces before
+'* being compared. Passes if they are identical, fails otherwise and exits test.
+'*
+'* Note that strExpected can take a regex pattern. See CheckEquality function for
+'* details.
+'*******************************************************************************
+Public Function AssertEqualityOrDie(strExpected, strActual, strName, strDescription)
+
+	CheckEquality strExpected, strActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertBooleanEqualityOrDie
+'*
+'*       Inputs:  boolExpected - expected value
+'*                boolActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two booleans are identical. Passes if they are identical, fails
+'* otherwise and exits test.
+'*******************************************************************************
+Public Function AssertBooleanEqualityOrDie(boolExpected, boolActual, strName, strDescription)
+
+	CheckBooleanEquality boolExpected, boolActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNumericEqualityOrDie
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two numerical values are identical. Passes if they are identical, 
+'* fails otherwise and exits test.
+'*******************************************************************************
+Public Function AssertNumericEqualityOrDie(numExpected, numActual, strName, strDescription)
+
+	CheckNumericEquality numExpected, numActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNotEqualOrDie
+'*
+'*       Inputs:  strExpected - expected value. Note can take a regex
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if two strings are NOT identical. Strings are stripped of spaces 
+'* before being compared. Passes if they are NOT identical, fails otherwise and 
+'* exits test.
+'*
+'* Note that strExpected can take a regex pattern. See CheckNotEqual function
+'* for details.
+'*******************************************************************************
+Public Function AssertNotEqualOrDie(strExpected, strActual, strName, strDescription)
+
+	CheckNotEqual strExpected, strActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertContainsOrDie
+'*
+'*       Inputs:  strExpected - expected value
+'*                strActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if strActual is contained within strExpected. Strings are stripped of
+'* spaces before being examined. Passes if strExpected is found within (or is
+'* equal to) strActual, fails otherwise and exits test.
+'*******************************************************************************
+Public Function AssertContainsOrDie(strExpected, strActual, strName, strDescription)
+
+	CheckContains strExpected, strActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertLessThanOrEqualOrDie
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is less than or equal to numActual. Passes if
+'* numExpected < = numActual, fails if numExpected > numActual and exits test.
+'*******************************************************************************
+Public Function AssertLessThanOrEqualOrDie(strExpected, strActual, strName, strDescription)
+
+	CheckLessThanOrEqual strExpected, strActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertGreaterThanOrEqualOrDie
+'*
+'*       Inputs:  numExpected - expected value
+'*                numActual - actual value
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if numExpected is greater than or equal to numActual. Passes if
+'* numExpected > = numActual, fails if numExpected < numActual and exits test.
+'*******************************************************************************
+Public Function AssertGreaterThanOrEqualOrDie(strExpected, strActual, strName, strDescription)
+
+	CheckGreaterThanOrEqual strExpected, strActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertExistsOrDie
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does,
+'* fails if it does not and exits test.
+'*******************************************************************************
+Public Function AssertExistsOrDie( ByRef objItem, strName, strDescription)
+
+	CheckExists objItem, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertNotExistsOrDie
+'*
+'*       Inputs:  objItem - reference to object whose existence is being tested.
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Checks if the object referenced by objItem exists or not. Passes if it does
+'* NOT exist, fails if it does and exits test.
+'*******************************************************************************
+Public Function AssertNotExistsOrDie( ByRef objItem, strName, strDescription)
+
+	CheckNotExists objItem, strName, strDescription, micFail, True
+
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertFalseOrDie
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is False
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckFalse which has the expected value pre-set to "false". Fails if
+'* not false and exits test.
+'*******************************************************************************
+Public Function AssertFalseOrDie(boolActual, strName, strDescription)
+
+	CheckFalse boolActual, strName, strDescription, micFail, True
+	
+End Function
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  AssertTrueOrDie
+'*
+'*       Inputs:  boolActual - boolean value being checked to see if it is True
+'*                strName - name of the check - used in Reporter output
+'*                strDescription - description of check - used in Reporter output
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Wraps CheckTrue which has the expected value pre-set to "true". Fails if
+'* not true and exits test.
+'*******************************************************************************
+Public Function AssertTrueOrDie(boolActual, strName, strDescription)
+
+	CheckTrue boolActual, strName, strDescription, micFail, True
+	
+End Function
+
+'
+' #### End Assert*OrDie versions. ###############################################
+'
+
+'*******************************************************************************
+'*                  FUNCTION DECLARATION
+'*******************************************************************************
+'*         Name:  ExitTest
+'*
+'*       Inputs:  None
+'*      Outputs:  none
+'*
+'* Return Value:  nothing (Stops current test)
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Simply stops the current test's execution. Created to replace the ExitTest
+'* built in QTP method so the "Die" part of the Assert*OrDie functions don't
+'* cause exceptions.  
+'*******************************************************************************
+Public Sub ExitTest()
+
+Runner.Stop
+
+End Sub
+
+'*******************************************************************************
+'*                  CLASS DECLARATION
+'*******************************************************************************
+'*         Name:  Report_class
+'*
+'*       Inputs:  None
+'*      Outputs:  none
+'*
+'* Return Value:  nothing
+'*
+'*******************************************************************************
+'*                 FUNCTION DESCRIPTION
+'*******************************************************************************
+'* Used to replace the QTP reporter.ReportEvent calls in the above functions.
+'* See InitReporter sub above which is called from GeneralEvents_OnStartTest
+'* event handler and Instantiates the Reporter Global variable using the
+'* Report_class Class.  
+'*******************************************************************************
+Class Report_class
+
+  Private Sub Class_Initialize()
+    ' Class Initializer
+  End Sub
+      
+  ' Reporter.ReportEvent numFaultLevel, strName, strDescription &" TEST " & strFaultDesc & " -- EXPECTED: " & strExpected &" ACTUAL: " & strActual
+  Public Sub ReportEvent(numFaultLevel, strName, strDescription)
+        
+    if numFaultLevel = micFail then
+      log.Error strName, strDescription
+    elseif numFaultLevel = micWarning then
+      log.Warning strName, strDescription
+    else
+      log.Message strName, strDescription
+    end if
+  End Sub
+      
+End Class
+
