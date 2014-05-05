@@ -20,6 +20,8 @@ Option Explicit
 ' ##
 ' ## Function List:
 ' ##          GetConnStr
+' ##          DBQueryToCSV
+' ##          WriteCSVRecordset
 ' ##          CreateRecordSet
 ' ##          CloseRecordset
 ' ##          GetField
@@ -67,11 +69,89 @@ end function ' GetConnStr
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
 '* Name:         DBQueryToCSV
+'*
+'* Purpose:     Generate and ADO Recordset and Store the results in a CSV file
+'* Effects:     New .CSV file is generated with the results of the Query
+'* Inputs:      sConnStr (Connection String - always from GetConnStr())
+'*              sSQL (SQL to execute to create the recordset) 
+'* Returns:     string containing path to .XLS file 
+'* 
+'*****************************************************************************
+'*       SUBROUTINE DESCRIPTION
+'*****************************************************************************
+'* Generate and ADO Recordset and Store the results in a CSV file
+'****************************************************************************
+Public Function DBQueryToCSV(sConnStr, sSQL)
+
+Dim rstLocal
+Dim sCSVOut
+
+CreateRecordSet rstLocal, sConnStr, sSQL
+
+sCSVOut = GetFieldList(rstLocal, ",") & vbCrLf
+do while (not rstLocal.EOf)
+  sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
+  rstLocal.Next
+loop
+DBQueryToCSV = WriteCSVRecordset(sCVSOut)
 
 
+End Function ' DBQueryToCSV
+' ##########################################################
+' ##########################################################
+'*****************************************************************************
+'*        SUBROUTINE DECLARATION
+'*****************************************************************************
+'* Name:         WriteCSVRecordset
+'*
+'* Purpose:     Writes the results from a Recordset to the reports directory
+'*              in a sub-directory db_queries
+'* Effects:     New .CSV file is generated with the results of the Query
+'* Inputs:      strWriteThis  (Complete CSV text to write) 
+'* Returns:     string containing path to .XLS file 
+'* 
+'*****************************************************************************
+'*       SUBROUTINE DESCRIPTION
+'*****************************************************************************
+'* Writes the results from a Recordset to the reports directory
+'* in a sub-directory db_queries
+'****************************************************************************
+Public Function WriteCSVRecordset(strWriteThis)
 
+' Check Project.Variables.gsReportDir exists (Create it if it doesn't)
+if not MyDirExists(Project.Variables.gsReportDir) then
+  if not MyCreateDir(Project.Variables.gsReportDir) then
+    log.Error "Cannot Create Report Directory: '" & Project.Variables.gsReportDir & "'", _
+              "Cannot Create Report Directory: '" & Project.Variables.gsReportDir & "'" & vbCr & _
+              "Please make sure Project.Variables.gsReportDir is setuup correctly" & vbCr & _
+              "and the the parent directory tree exists"
+    runner.Stop
+  end if
+end if
 
+' Check that the db_queries sub-directory exists
+if not (Wack(Project.Variables.gsReportDir) & "db_queries") then
+  if not MyCreateDir(Wack(Project.Variables.gsReportDir) & "db_queries") then
+    log.Error "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'", _
+              "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'" & vbCr & _
+              "Please make sure Project.Variables.gsReportDir is setuup correctly" & vbCr & _
+              "and the the parent directory tree exists"
+    runner.Stop
+  End If
+End If
 
+' Get Unique file name for this file
+sOutFile = CreateFilename(Wack(Project.Variables.gsReportDir) & "db_queries" , _
+                          "sqlResults_", .csv)
+if Not MyWriteFile(sOutFile, strWriteThis) then
+  log.Warning "Could not write db_query file: '" & sOutFile & "'", _
+              "Could not write db_query file: '" & sOutFile & "'"
+End If
+WriteCSVRecordset = sOutFile
+              
+End Function ' WriteCSVRecordset
+' ##########################################################
+' ##########################################################
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
@@ -84,7 +164,6 @@ end function ' GetConnStr
 '* Inputs:       rstIn (Output Recordset)
 '*               sConnStr (Connection String - always from GetConnStr())
 '*               sSQL (SQL to execute to create the recordset)
-'*               bMakeEditable (Make recordset updateable, o/w read only)
 '* Returns:      The ADO Recordset in the rstIn output variable
 '* TODO:         Needs to have exception handling added
 '*****************************************************************************
