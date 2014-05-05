@@ -474,7 +474,7 @@ Public Sub RunSoapTest()
 Dim strParams, strCMDParams
 
   strParams = "USD,EUR"
-  'strParams = "USD,SVC"
+  strParams = "USD,SVC"
   
   MyWriteFile "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt", strParams
   do while (not MyKillFile("c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt"))
