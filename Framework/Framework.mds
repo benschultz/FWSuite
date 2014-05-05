@@ -1184,7 +1184,7 @@
 				<Prp name="type" type="I" value="6"/>
 			</Node>
 			<Prp name="key" type="S" value="{571733D2-726B-4609-B12E-308E97409519}"/>
-			<Prp name="settingsversion" type="S" value="10.10"/>
+			<Prp name="settingsversion" type="S" value="10.20"/>
 		</Node>
 		<Node name="test data">
 			<Node name="child list"/>
