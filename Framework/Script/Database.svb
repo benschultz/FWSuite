@@ -16,10 +16,12 @@ Option Explicit
 ' ##                         FILE DESCRIPTION                                                                                                                                                                                                       
 ' ##################################################################################################################################################################################################################################
 ' ## Database API framework
-' ## Description: Functions to connect to and maniplulate MSSQL database
+' ## Description: Functions to connect to and maniplulate databases
 ' ##
 ' ## Function List:
 ' ##          GetConnStr
+' ##          DBQueryToCSV
+' ##          WriteCSVRecordset
 ' ##          CreateRecordSet
 ' ##          CloseRecordset
 ' ##          GetField
@@ -63,15 +65,128 @@ Public Function GetConnStr()
 end function ' GetConnStr
 ' ##########################################################
 ' ##########################################################
+
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
 '* Name:         DBQueryToCSV
+'*
+'* Purpose:     Generate and ADO Recordset and Store the results in a CSV file
+'* Effects:     New .CSV file is generated with the results of the Query
+'* Inputs:      sConnStr (Connection String - always from GetConnStr())
+'*              sSQL (SQL to execute to create the recordset)
+'*              boolStartDDT (Should we initiate a DDT on this file?) 
+'* Returns:     string containing path to .XLS file
+'*              (If boolStartDDT is True:
+'*               Also starts the DDT on the file so the calling routine
+'*               will be responsible for processing the records and doing
+'*               DDT.CloseDriver DDT.CurrentDriver.Name ---
+'*               Use DDT.CurrentDriver.First, DDT.CurrentDriver.EOF, 
+'*               DDT.CurrentDriver.Value("FieldName") and
+'*               DDT.CurrentDriver.Next) 
+'* 
+'*****************************************************************************
+'*       SUBROUTINE DESCRIPTION
+'*****************************************************************************
+'* Generate and ADO Recordset and Store the results in a CSV file
+'****************************************************************************
+Public Function DBQueryToCSV(sConnStr, sSQL, boolStartDDT)
 
+Dim rstLocal
+Dim sCSVOut
+Dim strRetValue
+dim objRetValue
 
+CreateRecordSet rstLocal, sConnStr, sSQL
 
+' Create a string containing CSV formatted text
+' to write to the csv file.  The string will 
+' contain all the records in the recordset.
+sCSVOut = GetFieldList(rstLocal, ",") & vbCrLf
+do while (not rstLocal.EOf)
+  sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
+  rstLocal.Next
+loop
 
+' Create a unique .CSV file capturing the full path to return later
+strRetValue = WriteCSVRecordset(sCSVOut)
+log.Message "Wrote SQL Results to CSV file: " & _
+            strRetValue, "SQL CODE:" & vbcr & sSQL
 
+'=======================================================================
+' boolStartDDT ?
+' This gives the calling routine the option to start reading the .CSV
+' file right away or just capture the full path to the .CVS file and 
+' initiate the DDT at a later time manually.
+if boolStartDDT then
+  DDT.CSVDriver(strRetValue)
+end if
+'=======================================================================
+
+' Return the full path to newly created .CSV file
+DBQueryToCSV = strRetValue 
+
+set rstLocal = Nothing
+
+End Function ' DBQueryToCSV
+' ##########################################################
+' ##########################################################
+
+'*****************************************************************************
+'*        SUBROUTINE DECLARATION
+'*****************************************************************************
+'* Name:         WriteCSVRecordset
+'*
+'* Purpose:     Writes the results from a Recordset to the reports directory
+'*              in a sub-directory db_queries
+'* Effects:     New .CSV file is generated with the results of the Query
+'* Inputs:      strWriteThis  (Complete CSV text to write) 
+'* Returns:     string containing path to .XLS file 
+'* 
+'*****************************************************************************
+'*       SUBROUTINE DESCRIPTION
+'*****************************************************************************
+'* Writes the results from a Recordset to the reports directory
+'* in a sub-directory db_queries
+'****************************************************************************
+Public Function WriteCSVRecordset(strWriteThis)
+
+Dim sOutFile
+
+' Check Project.Variables.gsReportDir exists (Create it if it doesn't)
+if not MyDirExists(Project.Variables.gsReportDir) then
+  if not MyCreateDir(Project.Variables.gsReportDir) then
+    log.Error "Cannot Create Report Directory: '" & Project.Variables.gsReportDir & "'", _
+              "Cannot Create Report Directory: '" & Project.Variables.gsReportDir & "'" & vbCr & _
+              "Please make sure Project.Variables.gsReportDir is setuup correctly" & vbCr & _
+              "and the the parent directory tree exists"
+    runner.Stop
+  end if
+end if
+
+' Check that the db_queries sub-directory exists
+if not MyDirExists(Wack(Project.Variables.gsReportDir) & "db_queries") then
+  if not MyCreateDir(Wack(Project.Variables.gsReportDir) & "db_queries") then
+    log.Error "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'", _
+              "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'" & vbCr & _
+              "Please make sure Project.Variables.gsReportDir is setuup correctly" & vbCr & _
+              "and the the parent directory tree exists"
+    runner.Stop
+  End If
+End If
+
+' Get Unique file name for this file
+sOutFile = CreateFilename(Wack(Project.Variables.gsReportDir) & "db_queries" , _
+                          "sqlResults_", "csv")
+if Not MyWriteFile(sOutFile, strWriteThis) then
+  log.Warning "Could not write db_query file: '" & sOutFile & "'", _
+              "Could not write db_query file: '" & sOutFile & "'"
+End If
+WriteCSVRecordset = sOutFile
+              
+End Function ' WriteCSVRecordset
+' ##########################################################
+' ##########################################################
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
@@ -84,7 +199,6 @@ end function ' GetConnStr
 '* Inputs:       rstIn (Output Recordset)
 '*               sConnStr (Connection String - always from GetConnStr())
 '*               sSQL (SQL to execute to create the recordset)
-'*               bMakeEditable (Make recordset updateable, o/w read only)
 '* Returns:      The ADO Recordset in the rstIn output variable
 '* TODO:         Needs to have exception handling added
 '*****************************************************************************

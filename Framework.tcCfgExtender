@@ -25,7 +25,7 @@
 				<Node name="{8ee82d46-af98-4371-988c-39e367c94873}"/>
 			</Node>
 			<Node name="{24b6fa0b-0143-461a-9758-aeb9e9a9428b}">
-				<Prp name="activity" type="S" value="{FB9DCD13-C581-4170-A257-73DE8F42E91D}"/>
+				<Prp name="activity" type="S" value="{264308E6-664F-4050-BD4F-500762027E4D}"/>
 			</Node>
 			<Node name="{2c786620-2489-4cbb-9c1e-1a94437a9245}">
 				<Node name="{d9f19b0d-d9d3-46ee-9551-28fba0dfc836}">
@@ -120,11 +120,30 @@
 					<Prp name="expression" type="S" value="xmlDoc.parseError"/>
 					<Prp name="index" type="I" value="4"/>
 				</Node>
+				<Node name="item_5">
+					<Prp name="enabled" type="B" value="-1"/>
+					<Prp name="expression" type="S" value="strRetValue"/>
+					<Prp name="index" type="I" value="5"/>
+				</Node>
+				<Node name="item_6">
+					<Prp name="enabled" type="B" value="-1"/>
+					<Prp name="expression" type="S" value="i"/>
+					<Prp name="index" type="I" value="6"/>
+				</Node>
+				<Node name="item_7">
+					<Prp name="enabled" type="B" value="-1"/>
+					<Prp name="expression" type="S" value="len(ddt_data_string)"/>
+					<Prp name="index" type="I" value="7"/>
+				</Node>
 				<Prp name="history" type="S" value="objForecast&#xA;sXMLNode(i)&#xA;sXMLNodeValue(i)&#xA;Ucase(sNodesPath)&#xA;toupper(sNodesPath)&#xA;&quot;|&quot; &amp; sNodePath &amp; &quot;|&quot;&#xA;&quot;|&quot; &amp; sChkPath &amp; &quot;|&quot;&#xA;&quot;|&quot; &amp; sChkPath &amp; '&quot;&quot;&#xA;&quot;|&quot; &amp; sChkPath &amp; '|&quot;"/>
 			</Node>
 			<Node name="{86873e45-42bf-4c44-8fbd-d6bdfbfd5189}"/>
 			<Node name="{90fe4d39-229d-4887-ac6f-07b02ce523fc}">
-				<Node name="{90fe4d39-229d-4887-ac6f-07b02ce523fc}"/>
+				<Node name="{90fe4d39-229d-4887-ac6f-07b02ce523fc}">
+					<Node name="{c902f9ac-a1ce-468f-8902-23f9ca717815}\testdata">
+						<Node name="expanding"/>
+					</Node>
+				</Node>
 			</Node>
 			<Node name="{d0151f8e-51fe-49da-8534-008b9f1b7c45}">
 				<Node name="{00000000-0000-0000-0000-000000000000}">

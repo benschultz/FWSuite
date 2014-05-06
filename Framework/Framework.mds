@@ -1184,7 +1184,7 @@
 				<Prp name="type" type="I" value="6"/>
 			</Node>
 			<Prp name="key" type="S" value="{571733D2-726B-4609-B12E-308E97409519}"/>
-			<Prp name="settingsversion" type="S" value="10.20"/>
+			<Prp name="settingsversion" type="S" value="10.10"/>
 		</Node>
 		<Node name="test data">
 			<Node name="child list"/>
@@ -1371,6 +1371,24 @@
 					<Prp name="local" type="B" value="0"/>
 					<Prp name="name" type="S" value="nSecWaitDemoMode"/>
 					<Prp name="type" type="S" value="{88422C25-DDF4-4EA1-B7CC-95779A023F5D}"/>
+				</Node>
+				<Node name="var25">
+					<Node name="defvalue">
+						<Prp name="strvalue" type="H" value="43003A005C005400430039005C005200650070006F00720074007300"/>
+					</Node>
+					<Prp name="category" type="H" value=" "/>
+					<Prp name="descr" type="H" value=" "/>
+					<Prp name="local" type="B" value="0"/>
+					<Prp name="name" type="S" value="gsReportDir"/>
+					<Prp name="type" type="S" value="{123F0C0F-44B4-4BAF-B0E6-F3F89FD873B5}"/>
+				</Node>
+				<Node name="var26">
+					<Node name="defvalue"/>
+					<Prp name="category" type="H" value=" "/>
+					<Prp name="descr" type="H" value="520065007400750072006E002000560061006C0075006500200046006F0072002000460069006E006400500061006E0065006C00570069007400680061006E00640057006900740068006F00750074005400650078007400"/>
+					<Prp name="local" type="B" value="0"/>
+					<Prp name="name" type="S" value="PanelObjRetVal"/>
+					<Prp name="type" type="S" value="{F38B9AD1-7B22-410F-95FC-6D9420FDE947}"/>
 				</Node>
 				<Node name="var3">
 					<Node name="defvalue">
