@@ -469,30 +469,50 @@ Log.Message ddt.CurrentDriver.Value("Email") & ", " & _
 
 End Sub
 
-Public Sub RunSoapTest()
+Public Sub BeginSoapTest
 
-Dim strParams, strCMDParams
+  Call RunSoapTest("C:\Users\TestVM\Desktop\suitest", "CurrencyTest", "CurrencyTest", _
+      "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt",_
+      "USD,EUR", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt")
+      
+'  Call RunSoapTest("C:\Users\TestVM\Desktop\suitest1", "CurrencyTest", "CurrencyTest", _
+'      "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "C:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt")
 
-  strParams = "USD,EUR"
-  strParams = "USD,SVC"
+End Sub
+
+
+Public Sub RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, soapProjectXMLFile, strCSVInFile, strCSVIn, strCSVOutFile)
+
+'TODO: variables - Any suite or test case
+
+Dim strCMDParams
+
+'  strParams = "USD,EUR"
+'  strParams = "USD,SVC"
   
-  MyWriteFile "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt", strParams
-  do while (not MyKillFile("c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt"))
+  
+  MyWriteFile strCSVInFile, strCSVIn
+  do while (not MyKillFile(strCSVOutFile))
     aqUtils.Delay 100
   loop
   
-  strCMDParams = "-a -s " & chr(34) &  "CurrencyTest" & chr(34) & _
-                 " -c CurrencyTest -r -f " & chr(34) & "C:\Users\TestVM\Desktop\suitest" & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
-                 " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml" & chr(34)
-  
-  log.Message "TestRunner Parameters:", strCMDParams
+'  strCMDParams = "-a -s " & chr(34) &  "CurrencyTest" & chr(34) & _
+'                 " -c CurrencyTest -r -f " & chr(34) & "C:\Users\TestVM\Desktop\suitest" & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
+'                 " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml" & chr(34)
+  strCMDParams = "-a -s " & chr(34) &  soapTestSuiteName & chr(34) & _
+                 " -c " & soapTestName & " -r -f " & chr(34) & soapCommPath & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
+                 " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
+
+log.Message "TestRunner Parameters:", strCMDParams
+
  TestedApps.testrunner.Params.ActiveParams.CommandLineParameters = strCMDParams
  log.Message TestedApps.testrunner.Params.ActiveParams.CommandLineParameters
+
  TestedApps.testrunner.Run
-  do while (not MyFileExists("c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt"))
+  do while (not MyFileExists(strCSVOutFile))
     aqUtils.Delay 100
   loop
-  sTxt = ReadFileFromDisk("c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt")
+  sTxt = ReadFileFromDisk(strCSVOutFile)
   log.Message "SoapUI results", sTxt
     
 End Sub
