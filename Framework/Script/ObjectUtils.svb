@@ -29,15 +29,7 @@
 ' ##         CountTableRows
 ' ##         FindMultiObject
 ' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-' ##         CompareText
-
-
+' ############################################################################
 
 ' ############################################################################
 ' ## Name: WaitObjXTimes Author: Ben A. Schultz  Date 12/19/2012

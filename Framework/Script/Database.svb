@@ -65,6 +65,7 @@ Public Function GetConnStr()
 end function ' GetConnStr
 ' ##########################################################
 ' ##########################################################
+
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
@@ -106,11 +107,8 @@ do while (not rstLocal.EOf)
   sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
   rstLocal.Next
 loop
-'Test Data for unit test without SQL database
-'sCSVOut = "Field1,Field2,Field3" & vbCrLf & _
-'          "Test1, Test2, Test3" & vbCrLf & _
-'          "Row2, Row3, Row4" & vbcrlf & _
-'          "Junk1, Junk2, Junk3" & vbCrLf
+
+' Create a unique .CSV file capturing the full path to return later
 strRetValue = WriteCSVRecordset(sCSVOut)
 log.Message "Wrote SQL Results to CSV file: " & _
             strRetValue, "SQL CODE:" & vbcr & sSQL
@@ -131,24 +129,9 @@ DBQueryToCSV = strRetValue
 set rstLocal = Nothing
 
 End Function ' DBQueryToCSV
-
-Public Sub Test_DBQueryToCSV()
-
-Dim DDT_Data
-
-DDT_Data = DBQueryToCSV(GetConnStr(), "Test this SQL")
-DDT.CurrentDriver.First
-do while not DDT.CurrentDriver.EOF
-  log.Message DDT.CurrentDriver.Value("Field1") & ", " & DDT.CurrentDriver.Value("Field2") & ", " & DDT.CurrentDriver.Value("Field3")
-  ddt.CurrentDriver.Next
-loop
-DDT.CloseDriver DDT.CurrentDriver.Name
-
-End Sub
-
-
 ' ##########################################################
 ' ##########################################################
+
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
