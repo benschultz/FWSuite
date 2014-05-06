@@ -4,7 +4,7 @@ Sub GeneralEvents_OnStartTest(Sender)
 
 ' Set sart time here and then Instaniate Reporter
 Project.Variables.sTestStart = Now()
-' Instaniate Reporter in Assertions_QTP
+' Instaniate Reporter in Assertions
 InitReporter
 
 End Sub

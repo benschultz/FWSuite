@@ -73,35 +73,80 @@ end function ' GetConnStr
 '* Purpose:     Generate and ADO Recordset and Store the results in a CSV file
 '* Effects:     New .CSV file is generated with the results of the Query
 '* Inputs:      sConnStr (Connection String - always from GetConnStr())
-'*              sSQL (SQL to execute to create the recordset) 
-'* Returns:     string containing path to .XLS file 
+'*              sSQL (SQL to execute to create the recordset)
+'*              boolStartDDT (Should we initiate a DDT on this file?) 
+'* Returns:     string containing path to .XLS file
+'*              (If boolStartDDT is True:
+'*               Also starts the DDT on the file so the calling routine
+'*               will be responsible for processing the records and doing
+'*               DDT.CloseDriver DDT.CurrentDriver.Name ---
+'*               Use DDT.CurrentDriver.First, DDT.CurrentDriver.EOF, 
+'*               DDT.CurrentDriver.Value("FieldName") and
+'*               DDT.CurrentDriver.Next) 
 '* 
 '*****************************************************************************
 '*       SUBROUTINE DESCRIPTION
 '*****************************************************************************
 '* Generate and ADO Recordset and Store the results in a CSV file
 '****************************************************************************
-Public Function DBQueryToCSV(sConnStr, sSQL)
+Public Function DBQueryToCSV(sConnStr, sSQL, boolStartDDT)
 
 Dim rstLocal
 Dim sCSVOut
 Dim strRetValue
+dim objRetValue
 
 CreateRecordSet rstLocal, sConnStr, sSQL
 
+' Create a string containing CSV formatted text
+' to write to the csv file.  The string will 
+' contain all the records in the recordset.
 sCSVOut = GetFieldList(rstLocal, ",") & vbCrLf
 do while (not rstLocal.EOf)
   sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
   rstLocal.Next
 loop
-strRetValue = WriteCSVRecordset(sCVSOut)
+'Test Data for unit test without SQL database
+'sCSVOut = "Field1,Field2,Field3" & vbCrLf & _
+'          "Test1, Test2, Test3" & vbCrLf & _
+'          "Row2, Row3, Row4" & vbcrlf & _
+'          "Junk1, Junk2, Junk3" & vbCrLf
+strRetValue = WriteCSVRecordset(sCSVOut)
 log.Message "Wrote SQL Results to CSV file: " & _
             strRetValue, "SQL CODE:" & vbcr & sSQL
-DBQueryToCSV = strRetValue
+
+'=======================================================================
+' boolStartDDT ?
+' This gives the calling routine the option to start reading the .CSV
+' file right away or just capture the full path to the .CVS file and 
+' initiate the DDT at a later time manually.
+if boolStartDDT then
+  DDT.CSVDriver(strRetValue)
+end if
+'=======================================================================
+
+' Return the full path to newly created .CSV file
+DBQueryToCSV = strRetValue 
 
 set rstLocal = Nothing
 
 End Function ' DBQueryToCSV
+
+Public Sub Test_DBQueryToCSV()
+
+Dim DDT_Data
+
+DDT_Data = DBQueryToCSV(GetConnStr(), "Test this SQL")
+DDT.CurrentDriver.First
+do while not DDT.CurrentDriver.EOF
+  log.Message DDT.CurrentDriver.Value("Field1") & ", " & DDT.CurrentDriver.Value("Field2") & ", " & DDT.CurrentDriver.Value("Field3")
+  ddt.CurrentDriver.Next
+loop
+DDT.CloseDriver DDT.CurrentDriver.Name
+
+End Sub
+
+
 ' ##########################################################
 ' ##########################################################
 '*****************************************************************************
@@ -123,6 +168,8 @@ End Function ' DBQueryToCSV
 '****************************************************************************
 Public Function WriteCSVRecordset(strWriteThis)
 
+Dim sOutFile
+
 ' Check Project.Variables.gsReportDir exists (Create it if it doesn't)
 if not MyDirExists(Project.Variables.gsReportDir) then
   if not MyCreateDir(Project.Variables.gsReportDir) then
@@ -135,7 +182,7 @@ if not MyDirExists(Project.Variables.gsReportDir) then
 end if
 
 ' Check that the db_queries sub-directory exists
-if not (Wack(Project.Variables.gsReportDir) & "db_queries") then
+if not MyDirExists(Wack(Project.Variables.gsReportDir) & "db_queries") then
   if not MyCreateDir(Wack(Project.Variables.gsReportDir) & "db_queries") then
     log.Error "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'", _
               "Cannot Create db_queries Directory: '" & Wack(Project.Variables.gsReportDir) & "db_queries" & "'" & vbCr & _
@@ -147,7 +194,7 @@ End If
 
 ' Get Unique file name for this file
 sOutFile = CreateFilename(Wack(Project.Variables.gsReportDir) & "db_queries" , _
-                          "sqlResults_", .csv)
+                          "sqlResults_", "csv")
 if Not MyWriteFile(sOutFile, strWriteThis) then
   log.Warning "Could not write db_query file: '" & sOutFile & "'", _
               "Could not write db_query file: '" & sOutFile & "'"
