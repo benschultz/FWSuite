@@ -473,15 +473,16 @@ Public Sub BeginSoapTest
 
   Call RunSoapTest("C:\Users\TestVM\Desktop\suitest", "CurrencyTest", "CurrencyTest", _
       "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt",_
-      "USD,EUR", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt")
+      "USD,EUR", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt", false)
       
-'  Call RunSoapTest("C:\Users\TestVM\Desktop\suitest1", "CurrencyTest", "CurrencyTest", _
-'      "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "C:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt")
+  Call RunSoapTest("C:\Users\TestVM\Desktop\WeatherSuite", "ZipSearch", "CityByZip", _
+      "C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSource.txt",_
+      "50010", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSourceExport.txt", false)
 
 End Sub
 
 
-Public Sub RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, soapProjectXMLFile, strCSVInFile, strCSVIn, strCSVOutFile)
+Public Sub RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, soapProjectXMLFile, strCSVInFile, strCSVIn, strCSVOutFile, boolDoReports)
 
 'TODO: variables - Any suite or test case
 
@@ -496,13 +497,15 @@ Dim strCMDParams
     aqUtils.Delay 100
   loop
   
-'  strCMDParams = "-a -s " & chr(34) &  "CurrencyTest" & chr(34) & _
-'                 " -c CurrencyTest -r -f " & chr(34) & "C:\Users\TestVM\Desktop\suitest" & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
-'                 " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml" & chr(34)
-  strCMDParams = "-a -s " & chr(34) &  soapTestSuiteName & chr(34) & _
-                 " -c " & soapTestName & " -r -f " & chr(34) & soapCommPath & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
-                 " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
-
+  if boolDoReports then
+      strCMDParams = "-a -s " & chr(34) &  soapTestSuiteName & chr(34) & _
+          " -c " & soapTestName & " -r -f " & chr(34) & soapCommPath & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
+          " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
+  else
+      strCMDParams = "-s " & chr(34) &  soapTestSuiteName & chr(34) & " -c " & soapTestName & _
+          " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
+  end if
+  
 log.Message "TestRunner Parameters:", strCMDParams
 
  TestedApps.testrunner.Params.ActiveParams.CommandLineParameters = strCMDParams
