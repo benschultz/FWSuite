@@ -59,8 +59,11 @@ Public RSFields
 '* Centralize Database Connection string specifications
 '*****************************************************************************
 Public Function GetConnStr()
-
-  GetConnStr = "Driver={SQL Server};Server=ATLDEVSQL10,1433;Database=DDS_DEV; uid=; pwd=; "
+  dim strProjPath
+  
+  strProjPath = Project.Path
+  GetConnStr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" & wack(strProjPath) & _
+                "UserDB.accdb;Persist Security Info=False;"
 
 end function ' GetConnStr
 ' ##########################################################
@@ -106,7 +109,7 @@ sCSVOut = GetFieldList(rstLocal, ",") & vbCrLf
 rstLocal.MoveFirst
 do while (not rstLocal.EOf)
   sCSVOut = sCSVOut & GetValueList(rstLocal, ",") & vbCrLf
-  rstLocal.Next
+  rstLocal.MoveNext
 loop
 CloseRecordset rstLocal
 
@@ -189,6 +192,26 @@ WriteCSVRecordset = sOutFile
 End Function ' WriteCSVRecordset
 ' ##########################################################
 ' ##########################################################
+
+public Sub UnitTest_DBQueryToCSV()
+
+Dim strCSVFilePath
+
+strCSVFilePath = DBQueryToCSV(GetConnStr(), "Select * From Users", True)
+
+ddt.CurrentDriver.First
+do while not ddt.CurrentDriver.EOF
+  log.Message ddt.CurrentDriver.Value("User") & ", " & ddt.CurrentDriver.Value("Password")
+  ddt.CurrentDriver.Next
+loop
+ddt.CloseDriver ddt.CurrentDriver.Name
+
+
+
+End Sub
+' ##########################################################
+' ##########################################################
+
 '*****************************************************************************
 '*        SUBROUTINE DECLARATION
 '*****************************************************************************
