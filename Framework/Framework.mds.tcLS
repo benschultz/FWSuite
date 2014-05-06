@@ -83,6 +83,9 @@
 					<Node name="var25">
 						<Prp name="name" type="S" value="gsReportDir"/>
 					</Node>
+					<Node name="var26">
+						<Prp name="name" type="S" value="PanelObjRetVal"/>
+					</Node>
 					<Node name="var3">
 						<Prp name="name" type="S" value="gbDoCSV"/>
 					</Node>

@@ -16,7 +16,7 @@ Option Explicit
 ' ##                         FILE DESCRIPTION                                                                                                                                                                                                       
 ' ##################################################################################################################################################################################################################################
 ' ## Database API framework
-' ## Description: Functions to connect to and maniplulate MSSQL database
+' ## Description: Functions to connect to and maniplulate databases
 ' ##
 ' ## Function List:
 ' ##          GetConnStr
@@ -85,6 +85,7 @@ Public Function DBQueryToCSV(sConnStr, sSQL)
 
 Dim rstLocal
 Dim sCSVOut
+Dim strRetValue
 
 CreateRecordSet rstLocal, sConnStr, sSQL
 
@@ -93,8 +94,12 @@ do while (not rstLocal.EOf)
   sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
   rstLocal.Next
 loop
-DBQueryToCSV = WriteCSVRecordset(sCVSOut)
+strRetValue = WriteCSVRecordset(sCVSOut)
+log.Message "Wrote SQL Results to CSV file: " & _
+            strRetValue, "SQL CODE:" & vbcr & sSQL
+DBQueryToCSV = strRetValue
 
+set rstLocal = Nothing
 
 End Function ' DBQueryToCSV
 ' ##########################################################

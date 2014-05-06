@@ -1382,6 +1382,14 @@
 					<Prp name="name" type="S" value="gsReportDir"/>
 					<Prp name="type" type="S" value="{123F0C0F-44B4-4BAF-B0E6-F3F89FD873B5}"/>
 				</Node>
+				<Node name="var26">
+					<Node name="defvalue"/>
+					<Prp name="category" type="H" value=" "/>
+					<Prp name="descr" type="H" value="520065007400750072006E002000560061006C0075006500200046006F0072002000460069006E006400500061006E0065006C00570069007400680061006E00640057006900740068006F00750074005400650078007400"/>
+					<Prp name="local" type="B" value="0"/>
+					<Prp name="name" type="S" value="PanelObjRetVal"/>
+					<Prp name="type" type="S" value="{F38B9AD1-7B22-410F-95FC-6D9420FDE947}"/>
+				</Node>
 				<Node name="var3">
 					<Node name="defvalue">
 						<Prp name="boolvalue" type="B" value="0"/>
