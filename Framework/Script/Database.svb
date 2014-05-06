@@ -103,10 +103,12 @@ CreateRecordSet rstLocal, sConnStr, sSQL
 ' to write to the csv file.  The string will 
 ' contain all the records in the recordset.
 sCSVOut = GetFieldList(rstLocal, ",") & vbCrLf
+rstLocal.MoveFirst
 do while (not rstLocal.EOf)
-  sCSVOut = sCSVOut & GetValueList(rstLocal, ",")
+  sCSVOut = sCSVOut & GetValueList(rstLocal, ",") & vbCrLf
   rstLocal.Next
 loop
+CloseRecordset rstLocal
 
 ' Create a unique .CSV file capturing the full path to return later
 strRetValue = WriteCSVRecordset(sCSVOut)
