@@ -555,7 +555,6 @@ Dim strCMDParams
     aqUtils.Delay 100
   loop
   
-  'Creates a variable from the strCSVOutFile
   sTxt = ReadFileFromDisk(strCSVOutFile)
   
   'Puts the results of the SoapUI test in TestComplete's framework log
