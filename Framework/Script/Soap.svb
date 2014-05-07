@@ -469,6 +469,13 @@ Log.Message ddt.CurrentDriver.Value("Email") & ", " & _
 
 End Sub
 
+
+' ##########################################################
+' ##########################################################
+' ## The BeginSoapTest sub is for testing purposes only. It
+' ## tests the functionality of the RunSoapTest sub (see below)
+' ##########################################################
+' ##########################################################
 Public Sub BeginSoapTest
 
   Call RunSoapTest("C:\Users\TestVM\Desktop\suitest", "CurrencyTest", "CurrencyTest", _
@@ -481,7 +488,29 @@ Public Sub BeginSoapTest
 
 End Sub
 
-
+' ##########################################################
+' ##########################################################
+' ## The RunSoapTest sub runs a specified SoapUI test and
+' ## transfers the results of the test to a text document
+' ## 
+' ## Arguement              Description
+' ## ---------              -----------
+' ## soapCommPath           Directory to print test results to
+' ## soapTestSuiteName      Suite to use in the SoapUI project
+' ## soapTestName           Test to use in the test suite
+' ## soapProjectXMLFile     The SoapUI Project's XML file
+' ## strCSVInFile           Path to the CSV file to write
+' ##                        strCSVIn's variables into
+' ## strCSVIn               Variables used in the test
+' ## strCSVOutFile          Path to the CSV file to write the
+' ##                        output from the SoapUI Test
+' ## boolDoReports          If true, will run the test and
+' ##                        generate test reports and
+' ##                        strCSVOutFile's results. If false,
+' ##                        will only run the test and generate
+' ##                        strCSVOutFile's results. 
+' ##########################################################
+' ##########################################################
 Public Sub RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, soapProjectXMLFile, strCSVInFile, strCSVIn, strCSVOutFile, boolDoReports)
 
 'TODO: variables - Any suite or test case
@@ -491,31 +520,45 @@ Dim strCMDParams
 '  strParams = "USD,EUR"
 '  strParams = "USD,SVC"
   
-  
+' Writes the value of strCSVIn to the file specified by strCSVInFile. strCSVFile is used by SoapUI for paremeter usage
   MyWriteFile strCSVInFile, strCSVIn
+  
+  'Tells the program to wait if strCSVOutFile exists
   do while (not MyKillFile(strCSVOutFile))
     aqUtils.Delay 100
   loop
   
+'Runs the SoapUI test and prints the results into strCSVOutFile and rest reports
   if boolDoReports then
       strCMDParams = "-a -s " & chr(34) &  soapTestSuiteName & chr(34) & _
           " -c " & soapTestName & " -r -f " & chr(34) & soapCommPath & chr(34) & " -o -R " & chr(34) & "TestSuite Report" & chr(34) & _
           " -F " & chr(34) & "txt" & chr(34) & " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
+'Runs the SoapUI test and prints the results into strCSVOutFile.
   else
       strCMDParams = "-s " & chr(34) &  soapTestSuiteName & chr(34) & " -c " & soapTestName & _
           " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
   end if
-  
-log.Message "TestRunner Parameters:", strCMDParams
 
+ 'Prints the command line's prompt in TestComplete's framework log
+ log.Message "TestRunner Parameters:", strCMDParams
+
+ 'Runs SoapUI through the command line with the specified parameters
  TestedApps.testrunner.Params.ActiveParams.CommandLineParameters = strCMDParams
- log.Message TestedApps.testrunner.Params.ActiveParams.CommandLineParameters
-
+ 
+ 'Commented out since it does the same thing as the log.Message above, except it puts the command prompt as the message instead of additonal info
+ 'log.Message TestedApps.testrunner.Params.ActiveParams.CommandLineParameters
+  
  TestedApps.testrunner.Run
+  
+  'Tells the script to wait until strCSVOutFile is created through SoapUI 
   do while (not MyFileExists(strCSVOutFile))
     aqUtils.Delay 100
   loop
+  
+  'Creates a variable from the strCSVOutFile
   sTxt = ReadFileFromDisk(strCSVOutFile)
+  
+  'Puts the results of the SoapUI test in TestComplete's framework log
   log.Message "SoapUI results", sTxt
     
 End Sub
