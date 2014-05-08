@@ -539,14 +539,14 @@ Dim strCMDParams
           " -E Default " & chr(34) & soapProjectXMLFile & chr(34)
   end if
 
- 'Prints the command line's prompt in TestComplete's framework log
- log.Message "TestRunner Parameters:", strCMDParams
+ 'Commented out since it does the same thing as the log.Message above, except it puts the command prompt as the message instead of additonal info
+ 'log.Message "TestRunner Parameters:", strCMDParams
 
  'Runs SoapUI through the command line with the specified parameters
  TestedApps.testrunner.Params.ActiveParams.CommandLineParameters = strCMDParams
  
- 'Commented out since it does the same thing as the log.Message above, except it puts the command prompt as the message instead of additonal info
- 'log.Message TestedApps.testrunner.Params.ActiveParams.CommandLineParameters
+ 'Displays command line in TestComplete's log.
+ log.Message TestedApps.testrunner.Params.ActiveParams.CommandLineParameters
   
  TestedApps.testrunner.Run
   
