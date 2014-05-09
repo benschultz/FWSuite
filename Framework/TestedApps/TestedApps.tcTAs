@@ -124,12 +124,12 @@
 				<Node name="config">
 					<Node name="runmodeparams">
 						<Node name="debug">
-							<Prp name="parameters" type="S" value="-s &quot;ZipSearch&quot; -c CityByZip -E Default &quot;C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml&quot;"/>
+							<Prp name="parameters" type="S" value="-a -s &quot;PCR Sanity Test&quot; -c jasSpike -r -f &quot;C:\Users\TestVM\Desktop\JasTest&quot; -o -R &quot;TestSuite Report&quot; -F &quot;txt&quot; -E Default &quot;C:\Users\TestVM\Desktop\CNPAutoTest\SoapUI\SoapUIProject.xml&quot;"/>
 						</Node>
 						<Node name="simple">
 							<Prp name="filename" type="S" value="testrunner.bat"/>
 							<Prp name="filepath" type="S" value="C:\Program Files\SmartBear\SoapUI-Pro-5.0.0\bin\"/>
-							<Prp name="parameters" type="S" value="-s &quot;ZipSearch&quot; -c CityByZip -E Default &quot;C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml&quot;"/>
+							<Prp name="parameters" type="S" value="-a -s &quot;PCR Sanity Test&quot; -c jasSpike -r -f &quot;C:\Users\TestVM\Desktop\JasTest&quot; -o -R &quot;TestSuite Report&quot; -F &quot;txt&quot; -E Default &quot;C:\Users\TestVM\Desktop\CNPAutoTest\SoapUI\SoapUIProject.xml&quot;"/>
 						</Node>
 						<Prp name="activerunmode" type="S" value="Simple"/>
 					</Node>

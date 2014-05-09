@@ -485,6 +485,11 @@ Public Sub BeginSoapTest
   Call RunSoapTest("C:\Users\TestVM\Desktop\WeatherSuite", "ZipSearch", "CityByZip", _
       "C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSource.txt",_
       "50010", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSourceExport.txt", false)
+  
+  'Test currently throws exception. Will debug ASAP.   
+  'Call RunSoapTest("C:\Users\TestVM\Desktop\JasTest", "PCR Sanity Test", "jasSpike", _
+  '    "C:\Users\TestVM\Desktop\CNPAutoTest\SoapUI\SoapUIProject.xml", "C:\Users\TestVM\Desktop\JasTest\Delete Me.txt",_
+  '    "Delete Me", "C:\Users\TestVM\Desktop\JasTest\Export.txt", true)
 
 End Sub
 
