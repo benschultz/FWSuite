@@ -1,0 +1,227 @@
+﻿'USEUNIT FileSystemUtils
+
+Public intTCPassed
+Public intTCFailed
+Set objFSO = CreateObject("Scripting.FileSystemObject")
+Const ForAppending = 8
+Public strReportPath
+'connArray = Reports.ReadConfigFile()
+'sReportPath = connArray(0)
+'Set objFile = objFSO.CreateTextFile(FileName)
+'set objFile = nothing
+
+'This function reads the test cases from Excel Sheet and passes it to function addTestcasetoreport()
+'parameters:tc_id is test cases id and actTab is test case result.
+'This method is called in test suite in individual test cases.
+function testcase(tc_id,actTab)
+    Dim obj,File,Sheet,nRow,nColumns,val,R,C,TcId,Prequisite,Objective,Steps,ExpResult,ActResult,STatus,Comments
+    
+    if instr(1, actTab, "pass", vbTextCompare) > 0 then
+      intTCPassed = intTCPassed + 1
+    else
+      intTCFailed = intTCFailed + 1
+    end if
+		Set obj = createObject("Excel.Application")
+		Set File = obj.Workbooks.Open(Wack(Project.Path) & "Stores\Files\TestCases.xlsx")
+		Set Sheet = File.Sheets("TestCaseReport")
+		nRow = Sheet.UsedRange.Rows.Count
+		nColumns =Sheet.UsedRange.Columns.Count
+		R=1
+    C=1		
+		Do While R <= nRow
+			C=1
+        If Sheet.Cells(R,C).Value = tc_id Then 
+            TcId = Sheet.Cells(R,C).Value
+            Prequisite = Sheet.Cells(R,C+1).Value
+            Objective = Sheet.Cells(R,C+2).Value
+            Steps = Sheet.Cells(R,C+3).Value
+            Steps = replace(Steps, chr(10) ,"<br>")
+            ExpResult = Sheet.Cells(R,C+4).Value
+            ExpResult = replace(ExpResult, chr(10) ,"<br>")
+            STatus = Sheet.Cells(R,C+5).Value
+            Comments = Sheet.Cells(R,C+6).Value
+            call addTestcasetoreport(TcId,Prequisite,Objective,Steps,ExpResult,actTab,Comments)
+        End If
+        R=R+1
+		Loop
+		obj.Quit
+End function
+
+'This function creates a header for  a Web Page or group of test cases
+function testcaseHeader(tc_id)
+    Dim obj,File,Sheet,nRow,nColumns,R,C
+		Set obj = createObject("Excel.Application")
+		Set File = obj.Workbooks.Open(Wack(ProjectSuite.Path) & "TestCases.xlsx")
+		Set Sheet = File.Sheets("TestCaseReport")
+		nRow = Sheet.UsedRange.Rows.Count
+		nColumns =Sheet.UsedRange.Columns.Count
+		R=1
+    C=1		
+		Do While R <= nRow
+			C=1
+        If Sheet.Cells(R,C).Value = tc_id Then 
+    			  Purpose = Sheet.Cells(R,C+1).Value
+            call addheader(Purpose)
+        End If
+        R=R+1
+		Loop
+		obj.Quit
+End function
+
+
+'This function prints build configuration
+Public function initialSetupreport(build,url)
+	Dim objWriter
+
+  
+  Set objWriter = objFSO.OpenTextFile(strReportPath, ForAppending, True)
+			objWriter.WriteLine("<html>")
+			objWriter.WriteLine("<head>")
+			objWriter.WriteLine("<title>Automation Execution report</title>")
+      objWriter.WriteLine("<style type='text/css'>.heading{background-color:#0A565C;color:White;text-align:center;}.background{background-color:White;}.topside{vertical-align: top;}.centeredtext{text-align:center;}</style>")
+			objWriter.WriteLine("</head>")
+			objWriter.WriteLine("<body style='background-color:#DFE6E6'>")
+			objWriter.WriteLine("<table style='width:100%; font-family:Verdana;'>")
+			objWriter.WriteLine("<tr><td><table style='width:100%;'><tr><td><h2>Automation Execution report</h2></td>")
+			objWriter.WriteLine("<td style='text-align: right'><img src='http://xpanxion.com/images/logo.png' style='height: 75px; width: 250px' /></td></tr></table></td></tr>")
+			objWriter.WriteLine("<tr><td>")
+			objWriter.WriteLine("<p><b>Configuration details:-</b></p>")
+			objWriter.WriteLine("<table style='width:100%; text-align: center; font-size:12px;'><tr class='heading'>")
+			objWriter.WriteLine("<th style='width:25%'>Build</th>")
+			objWriter.WriteLine("<th style='width:25%'>URL</th>")
+			objWriter.WriteLine("<th style='width:25%'>Started at</th>")
+			objWriter.WriteLine("<th style='width:25%'>Module name</th>")
+			objWriter.WriteLine("</tr><tr class='background'>")
+			objWriter.WriteLine("<td style='width:25%'>"& build & "</td>")
+			objWriter.WriteLine("<td style='width:25%'>"& url &"</td>")
+			Dim TempVar 
+			TempVar = Date()
+			objWriter.WriteLine("<td style='width:25%'>"& TempVar &"</td>")
+			objWriter.WriteLine("<td style='width:25%'> Profiler base_Global profiles </td>")
+			objWriter.WriteLine("</tr></table>")
+			objWriter.WriteLine("</td></tr>")
+			objWriter.WriteLine("<tr><td><br />")
+			objWriter.WriteLine("<p><b>Execution details:-</b></p>")
+			objWriter.WriteLine("<div style='height:300px; overflow:scroll;'>")
+			objWriter.WriteLine("<table style='width:100% ; font-size:12px;'><tr class='heading'>")
+			objWriter.WriteLine("<th style='width:6%' class='centeredtext'>Test Case#</th>")
+			objWriter.WriteLine("<th style='width:19%' class='topside'>Prequisite</th>")
+			objWriter.WriteLine("<th style='width:19%' class='topside'>Test Case Description</th>")
+			objWriter.WriteLine("<th style='width:19%' class='topside'>Test Case Execution Steps</th>")
+			objWriter.WriteLine("<th style='width:19%' class='topside'>Expected Results</th>")
+			objWriter.WriteLine("<th style='width:6%'class='centeredtext'>Actual Results</th>")
+			objWriter.WriteLine("<th style='width:12%' class='topside'>Comments</th>")
+			objWriter.WriteLine("</tr>")
+			objWriter.Close()
+End function
+
+'This function prints Execution Details, input for this function is obtained from function testcase(tc_id,actTab)
+
+Public function addTestcasetoreport(TcId,Prequisite,Objective,Steps,ExpResult,STatus,Comments )
+      Dim objWriter
+			Set objWriter = objFSO.OpenTextFile(strReportPath, ForAppending, True)
+			objWriter.WriteLine("<tr class='background'>")
+			objWriter.WriteLine("<td class='centeredtext'>"& TcId &"</td>")
+			objWriter.WriteLine("<td class='topside'>"& Prequisite &"</td>")
+			objWriter.WriteLine("<td class='topside'>"& Objective &"</td>")
+			objWriter.WriteLine("<td class='topside'>"& Steps &"</td>")
+			objWriter.WriteLine("<td class='topside'>"& ExpResult &"</td>")
+			If status ="Fail" Then
+				objWriter.WriteLine("<td class='centeredtext'><b style='color:Red;'>" & STatus & "</b></td>")
+			Else
+				objWriter.WriteLine("<td class='centeredtext'>"& STatus &"</td>")
+			End If
+			If status ="Fail" Then
+				objWriter.WriteLine("<td><b style='color:Red;' class='topside'>" & Comments & "</b></td>")
+			Else
+				objWriter.WriteLine("<td class='topside'>"& Comments &"</td>")
+			End If
+			objWriter.WriteLine("</tr>")
+			objWriter.Close()
+End function
+
+'This function is called in function testcaseHeader(tc_id)
+Public function addheader(Headertext)
+      Dim objWriter
+			Set objWriter = objFSO.OpenTextFile(strReportPath, ForAppending, True)
+			objWriter.WriteLine("<tr style='background-color: #95A2A0'><th colspan='7'>" & Headertext & "</th></tr>")
+			objWriter.Close()
+End function
+
+'This function prints Execution Summary
+'This should be explicitly called at the end of test suite.
+Public function EndofReport(intNotExed)
+      Dim objWriter
+			Set objWriter = objFSO.OpenTextFile(strReportPath, ForAppending, True)
+			Dim total,perc
+			objWriter.WriteLine("</table>")
+			objWriter.WriteLine("</div>")
+			objWriter.WriteLine("</td></tr>")
+			objWriter.WriteLine("<tr><td><table style='width:100%'><tr><td align='left' valign='top'>")
+			objWriter.WriteLine("<p><b>Execution Summary :-</b></p>")
+			objWriter.WriteLine("<table style='font-weight:bold;width:50%;font-size:12px;'>")
+			total = intTCPassed + intTCFailed + intNotExed
+			perc = (100*intTCPassed)/total
+			perc = Round(perc, 2)
+      objWriter.WriteLine("<tr><td class='heading'>Sr.No.</td><td class='heading'>Execution Items</td><td class='heading'>Count</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>1.</td><td class='background'>Total no. of Test cases</td><td class='background'>" & total & "</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>2.</td><td class='background'>No. of Test cases Executed</td><td class='background'>" & total & "</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>3.</td><td class='background'>No. of Test cases Passed</td><td class='background'>" & intTCPassed & "</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>4.</td><td class='background'>No. of Test cases Failed</td><td class='background'>" & intTCFailed & "</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>5.</td><td class='background'>No. of Test cases Not Executed/NA</td><td class='background'>" &  intNotExed & "</td></tr>")
+			objWriter.WriteLine("<tr><td class='background'>6.</td><td class='background'>Pass result</td><td class='background'>" &  perc & " %</td></tr>")
+			objWriter.WriteLine("</table>")
+     	objWriter.WriteLine("</td></tr></table>")
+			objWriter.WriteLine("</td></tr>")
+			objWriter.WriteLine("</table>")
+			objWriter.WriteLine("</body>")
+			objWriter.WriteLine("</html>")
+			objWriter.Close()
+End function
+
+Public Function ReadConfigFile()
+		Dim connectionArray(5)
+	  Dim objTextFileToRead,strFileText,ParamValue
+	  Set objTextFileToRead = CreateObject("Scripting.FileSystemObject").OpenTextFile(Wack(ProjectSuite.Path) & "Config.txt",1)
+  	Do While Not objTextFileToRead.AtEndOfStream
+   		  strFileText = objTextFileToRead.Readline()
+   		  If InStr(strFileText, "#")=1 Then
+            'strFileText = objTextFileToRead.Readline()
+        Else
+          If InStr(strFileText, "FileName") Then
+               	connectionArray(0) = Trim(Right(strFileText, Len(strFileText)-InStr(strFileText,"=")))
+
+          End If
+          If InStr(strFileText, "url") Then
+               	connectionArray(1) = Trim(Right(strFileText, Len(strFileText)-InStr(strFileText,"=")))
+
+          End If
+         	If InStr(strFileText, "strbrowser") Then
+               	connectionArray(2) = Trim(Right(strFileText, Len(strFileText)-InStr(strFileText,"=")))
+
+          End If
+         	If InStr(strFileText, "Build") Then
+               	connectionArray(3) = Trim(Right(strFileText, Len(strFileText)-InStr(strFileText,"=")))
+
+          End If
+        End If		
+    Loop
+	  objTextFileToRead.Close
+    ReadConfigFile=connectionArray
+End Function
+
+
+Public Sub Test_Report()
+
+
+
+'initialSetupreport connArray(3), connArray(1)
+testcase "1.0.1", "Pass"
+testcase "1.0.2", "Fail"
+testcase "1.0.3", "Pass"
+testcase "1.0.4", "Fail"
+testcase "1.0.5", "Pass"
+testcase "1.0.6", "Pass"
+'EndofReport 0
+
+End Sub

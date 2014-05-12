@@ -1,16 +1,39 @@
 ﻿'USEUNIT Assertions
+'USEUNIT FileSystemUtils
+'USEUNIT Reports
 
 Sub GeneralEvents_OnStartTest(Sender)
 
 ' Set sart time here and then Instaniate Reporter
 Project.Variables.sTestStart = Now()
+' Initialize Variables
+Project.Variables.gsReportDir = Wack(ProjectSuite.Path) & "Reports"
+Reports.intTCFailed = 0
+Reports.intTCPassed = 0
 ' Instaniate Reporter in Assertions
 InitReporter
-
+' Initialize HTML Report
+if not MyDirExists(Project.Variables.gsReportDir) then
+  if not MyCreateDir(Project.Variables.gsReportDir) then
+    log.Error "Could not create Reports Directory!", _
+              "Could not create Reports Directory!" & vbCr & _
+              Project.Variables.gsReportDir & vbCr & _
+              "Please insure that the parent directory exists!"
+    Runner.Stop
+  End If
+End If
+Reports.strReportPath = CreateFilename(Project.Variables.gsReportDir, "TestRun_", "html")
+if not MyCreateFile(Reports.strReportPath) then
+  log.Warning "Could not create HTML Report file: " & Reports.strReportPath, _
+              "Could not create HTML Report file: " & Reports.strReportPath
+end if
+initialSetupreport Project.Variables.gsBuild, Project.Variables.gsProject 
+  
 End Sub
 
 Sub GeneralEvents_OnStopTest(Sender)
 
+EndofReport 0
 Project.Variables.sTestEnd = Now()
 
 End Sub
