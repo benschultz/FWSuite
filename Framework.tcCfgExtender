@@ -25,7 +25,7 @@
 				<Node name="{8ee82d46-af98-4371-988c-39e367c94873}"/>
 			</Node>
 			<Node name="{24b6fa0b-0143-461a-9758-aeb9e9a9428b}">
-				<Prp name="activity" type="S" value="{6D09FFA6-0B96-48D8-B815-BD2BD3BF2BB1}"/>
+				<Prp name="activity" type="S" value="{FB9DCD13-C581-4170-A257-73DE8F42E91D}"/>
 			</Node>
 			<Node name="{2c786620-2489-4cbb-9c1e-1a94437a9245}"/>
 			<Node name="{415b5aa1-c6ac-4d4d-9a53-063a521a45ab}">
@@ -41,11 +41,11 @@
 					<Node name="1">
 						<Node name="editor">
 							<Node name="{8c45957c-f4b3-4dd7-9212-49cbd350f69f}">
-								<Prp name="key" type="S" value="{A5FB326B-3DF8-4700-97A3-A58BB90F0533}"/>
+								<Prp name="key" type="S" value="{7222B46A-4A5A-4E25-B8E8-CD0AC0B31870}"/>
 							</Node>
 							<Node name="{d0151f8e-51fe-49da-8534-008b9f1b7c45}">
 								<Prp name="col" type="I" value="0"/>
-								<Prp name="key" type="S" value="{B09CE40D-E10D-4601-B477-6637B5977002}"/>
+								<Prp name="key" type="S" value="{17502CCD-F9A2-4D9A-BAF0-D5E6F79971C2}"/>
 								<Prp name="line" type="I" value="0"/>
 								<Prp name="sellength" type="I" value="0"/>
 								<Prp name="selstart" type="I" value="0"/>
@@ -78,6 +78,7 @@
 					</Node>
 					<Node name="3">
 						<Node name="editor">
+							<Node name="{93765269-c25d-4cd5-b6bf-5d7454869c93}"/>
 							<Prp name="editor" type="S" value="{AF3789E2-9820-49D5-BFF6-7769A75679C2}"/>
 							<Prp name="focused" type="S" value="{5058E069-D3EE-4737-9EF5-065774E9AEF2}"/>
 						</Node>

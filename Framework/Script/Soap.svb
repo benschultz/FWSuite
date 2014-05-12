@@ -478,18 +478,18 @@ End Sub
 ' ##########################################################
 Public Sub BeginSoapTest
 
-  Call RunSoapTest("C:\Users\TestVM\Desktop\suitest", "CurrencyTest", "CurrencyTest", _
-      "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt",_
-      "USD,EUR", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt", false)
-      
-  Call RunSoapTest("C:\Users\TestVM\Desktop\WeatherSuite", "ZipSearch", "CityByZip", _
-      "C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSource.txt",_
-      "50010", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSourceExport.txt", false)
+'  Call RunSoapTest("C:\Users\TestVM\Desktop\suitest", "CurrencyTest", "CurrencyTest", _
+'      "C:\Users\TestVM\Desktop\Weather-soapui-projectPASS.xml", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSource.txt",_
+'      "USD,EUR", "c:\Users\TestVM\Desktop\suitest\CurrencyDataSourceExport.txt", false, 5)
+'      
+'  Call RunSoapTest("C:\Users\TestVM\Desktop\WeatherSuite", "ZipSearch", "CityByZip", _
+'      "C:\Users\TestVM\Desktop\WeatherSuite\Weather-soapui-project.xml", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSource.txt",_
+'      "50010", "C:\Users\TestVM\Desktop\WeatherSuite\WeatherSourceExport.txt", false, 5)
   
   'Test currently throws exception. Will debug ASAP.   
-  'Call RunSoapTest("C:\Users\TestVM\Desktop\JasTest", "PCR Sanity Test", "jasSpike", _
-  '    "C:\Users\TestVM\Desktop\CNPAutoTest\SoapUI\SoapUIProject.xml", "C:\Users\TestVM\Desktop\JasTest\Delete Me.txt",_
-  '    "Delete Me", "C:\Users\TestVM\Desktop\JasTest\Export.txt", true)
+  Call RunSoapTest("C:\Users\TestVM\Desktop\JasTest", "PCR Sanity Test", "jasSpike", _
+      "C:\Users\TestVM\Desktop\CNPAutoTest\SoapUI\SoapUIProject.xml", "C:\Users\TestVM\Desktop\JasTest\Delete Me.txt",_
+      "Delete Me", "C:\Users\TestVM\Desktop\SoapOutput.txt", true, 30)
 
 End Sub
 
@@ -516,14 +516,17 @@ End Sub
 ' ##                        strCSVOutFile's results. 
 ' ##########################################################
 ' ##########################################################
-Public Sub RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, soapProjectXMLFile, strCSVInFile, strCSVIn, strCSVOutFile, boolDoReports)
+
+
+Public Function RunSoapTest(soapCommPath, soapTestSuiteName, soapTestName, _
+                        soapProjectXMLFile, strCSVInFile, strCSVIn, _
+                        strCSVOutFile, boolDoReports, intTimeOutSecs)
 
 'TODO: variables - Any suite or test case
 
 Dim strCMDParams
-
-'  strParams = "USD,EUR"
-'  strParams = "USD,SVC"
+Dim strStartTime
+Dim sTxt
   
 ' Writes the value of strCSVIn to the file specified by strCSVInFile. strCSVFile is used by SoapUI for paremeter usage
   MyWriteFile strCSVInFile, strCSVIn
@@ -556,13 +559,21 @@ Dim strCMDParams
  TestedApps.testrunner.Run
   
   'Tells the script to wait until strCSVOutFile is created through SoapUI 
+  strStartTime = now()
   do while (not MyFileExists(strCSVOutFile))
     aqUtils.Delay 100
+    if dateDiff("s",strStartTime,now()) > intTimeOutSecs then
+      exit do
+    end if 
   loop
-  
-  sTxt = ReadFileFromDisk(strCSVOutFile)
-  
-  'Puts the results of the SoapUI test in TestComplete's framework log
-  log.Message "SoapUI results", sTxt
     
-End Sub
+  if MyFileExists(strCSVOutFile) then
+    sTxt = ReadFileFromDisk(strCSVOutFile)
+    log.Message "SoapUI results", sTxt
+    RunSoapTest = sTxt
+  else
+    log.Warning "SoapUI Timeout Failure", "Could not locate the output file (" & strCSVOutFile & ")"
+    RunSoapTest = "-1"
+  end if  
+    
+End Function
