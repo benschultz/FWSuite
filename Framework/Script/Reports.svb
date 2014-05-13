@@ -1,5 +1,30 @@
 ﻿'USEUNIT FileSystemUtils
 
+' ############################################################################################################################################################################################################
+' ##################################################################################################################################################################################################################################
+' ##                           FILE HEADER
+' ############################################################################################################################################################################################################
+' ## File Name: Reports.svb
+' ## Path:      <Update once Deployed>
+' ## Reference: <Not Sure ... need Project Number>
+' ##
+' ## (C) Copyright Ventyx, an ABB Company, 2014
+' ## 
+' ############################################################################################################################################################################################################
+' ##                         FILE DESCRIPTION                                                                                                                                                                                                       
+' ##################################################################################################################################################################################################################################
+' ## Reports framework
+' ## Description: API for integrated HTML automatic reporting
+' ##
+' ## Function List:
+' ##         testcase
+' ##         testcaseHeader
+' ##         initialSetupreport
+' ##         addTestcasetoreport
+' ##         addheader
+' ##         EndofReport
+
+
 Public intTCPassed
 Public intTCFailed
 Set objFSO = CreateObject("Scripting.FileSystemObject")
@@ -10,10 +35,32 @@ Public strReportPath
 'Set objFile = objFSO.CreateTextFile(FileName)
 'set objFile = nothing
 
+'*****************************************************************************
+'*        FUNCTION DECLARATION
+'*****************************************************************************
+'* Name:         testcase
+'* Purpose:      This function is the ONLY one that is called from automated
+'*               test cases.  The totals for Passed/Failed tests are tracked
+'*               in this function for use in the report summary later.
+'* Assumptions:  TestCase.xlsx has the correct Test Case numbers and details
+'*               and is located in Stores/Files directory of the project.
+'* Effects:      Report for this test run is updated with a detail line in 
+'*               table containing all the test cases. Globals intTCPassed and
+'*               intTCFailed are incrmented as described in Inputs/actTab below.
+'* Inputs:       tc_id (Test Case Id ... the id field in TestCases.xlsx)
+'*               actTab (string "Pass" or "Fail" -- actually any string the
+'*               containst "pass" case-insensative will work for Pass and 
+'*               anything else is a Fail.
+'* Returns:      nothing
+'*****************************************************************************
+'*       FUNCTION DESCRIPTION
+'*****************************************************************************
+'* make sure string has "\" on the end (helps when creating file paths)
+'*****************************************************************************
 'This function reads the test cases from Excel Sheet and passes it to function addTestcasetoreport()
 'parameters:tc_id is test cases id and actTab is test case result.
 'This method is called in test suite in individual test cases.
-function testcase(tc_id,actTab)
+Public Sub testcase(tc_id,actTab)
     Dim obj,File,Sheet,nRow,nColumns,val,R,C,TcId,Prequisite,Objective,Steps,ExpResult,ActResult,STatus,Comments
     
     if instr(1, actTab, "pass", vbTextCompare) > 0 then
@@ -45,7 +92,7 @@ function testcase(tc_id,actTab)
         R=R+1
 		Loop
 		obj.Quit
-End function
+End Sub
 
 'This function creates a header for  a Web Page or group of test cases
 function testcaseHeader(tc_id)
